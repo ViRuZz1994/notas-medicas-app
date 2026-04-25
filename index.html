@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Generador Profesional de Notas Médicas en cumplimiento con la NOM-004-SSA3-2012.">
+    <meta name="author" content="Sistema Inteligente de Expediente Clínico">
+    <title>Sistema Clínico | Notas Médicas NOM-004</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚕️</text></svg>">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* ===== ESTILOS COMPLETOS ===== */
+        :root {
+            --primary-color: #1a4b8c;
+            --secondary-color: #2c3e50;
+            --bg-body: #f4f7f6;
+            --bg-panel: #ffffff;
+            --border-radius: 8px;
+            --text-main: #333333;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-body);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            color: var(--text-main);
+            flex-direction: row;
+        }
+        /* Pantalla de login */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .login-card h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .login-card button {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+        .login-card button:hover {
+            background: #0f3b6b;
+        }
+        .error-msg {
+            color: red;
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+        /* Botón cerrar sesión */
+        .logout-btn {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin-left: 10px;
+        }
+        .logout-btn:hover {
+            background: #b91c1c;
+        }
+        .header-logout {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        /* Estilos del sistema clínico (igual que antes) */
+        #form-container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--bg-panel);
+            padding: 25px;
+            overflow-y: auto;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.08);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+        }
+        h2 {
+            color: var(--primary-color);
+            margin: 0 0 15px 0;
+            font-size: 1.4rem;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .tabs {
+            display: flex;
+            background: #e9ecef;
+            padding: 6px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+        .tab-btn.active {
+            background: var(--bg-panel);
+            color: var(--primary-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .section-toggle {
+            background: #fdfdfd;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+        .section-toggle h4 {
+            margin: 0 0 12px 0;
+            font-size: 0.85rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 5px;
+        }
+        .form-group { margin-bottom: 12px; }
+        .row-flex { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        label { display: block; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px; color: #475569; }
+        input, textarea, select {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(26, 75, 140, 0.1);
+        }
+        textarea { resize: vertical; min-height: 50px; }
+        .check-ctrl { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; accent-color: var(--primary-color); }
+        .grid-vitals { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .vital-box { text-align: center; }
+        .vital-box label { font-size: 0.75rem; color: #000; }
+        .vital-box input { text-align: center; padding: 6px; }
+        button.action-btn {
+            padding: 12px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+            transition: transform 0.1s, background 0.3s;
+            font-size: 0.9rem;
+        }
+        button.action-btn:active { transform: scale(0.98); }
+        .btn-pdf { background: #10b981; color: white; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }
+        .btn-pdf:hover { background: #059669; }
+        .btn-clear { background: #ef4444; color: white; margin-bottom: 20px; }
+        .btn-db { color: white; font-size: 0.75rem; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; flex: 1; transition: background 0.2s; }
+        .btn-save { background: #334155; }
+        .btn-save:hover { background: #1e293b; }
+        .btn-delete { background: #ef4444; }
+        .btn-delete:hover { background: #dc2626; }
+        .btn-manage-templates { background: #f59e0b; color: white; font-size: 0.75rem; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: background 0.2s; width: 100%; margin-top: 5px; }
+        .btn-manage-templates:hover { background: #d97706; }
+        .btn-manage-establecimientos { background: #0891b2; color: white; font-size: 0.7rem; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: background 0.2s; white-space: nowrap; }
+        .btn-manage-establecimientos:hover { background: #0e7490; }
+        .select-with-button { display: flex; gap: 8px; align-items: flex-end; }
+        .quick-scales { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+        .quick-btn { background: #e2e8f0; border: none; padding: 5px 10px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; font-weight: 600; color: #475569; transition: all 0.2s; }
+        .quick-btn:hover { background: #94a3b8; color: white; }
+        .template-tools { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #f8fafc; border-radius: var(--border-radius); margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        #preview-container { flex-grow: 1; display: flex; justify-content: center; padding: 30px; background: #94a3b8; overflow: auto; }
+        #note-to-print { width: 215.9mm; height: 279.4mm; background: white; background-size: cover; background-position: center top; background-repeat: no-repeat; position: relative; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); flex-shrink: 0; }
+        #text-layer { position: absolute; top: 95mm; left: 20mm; right: 20mm; bottom: 52mm; font-family: "Arial", sans-serif; font-size: 9.5pt; line-height: 1.3; display: flex; flex-direction: column; overflow-y: auto; color: #000; }
+        .header-data { display: flex; justify-content: space-between; border-bottom: 1.5px solid #1a4b8c; margin-bottom: 8px; padding-bottom: 4px; }
+        .vitals-row { display: flex; justify-content: space-between; font-size: 8.5pt; background: #f8fafc; padding: 6px; border-radius: 4px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
+        .clinical-section { margin-bottom: 8px; }
+        .section-title { font-weight: bold; text-transform: uppercase; font-size: 8.5pt; color: #1a4b8c; border-bottom: 1px solid #cbd5e1; margin-bottom: 3px; padding-bottom: 2px; }
+        .content-box { min-height: 1em; white-space: pre-wrap; text-align: justify; }
+        #footer-layer { position: absolute; bottom: 35mm; left: 0; right: 0; text-align: center; }
+        .signature-line { width: 250px; border-top: 1px solid #000; margin: 0 auto 5px; position: relative; }
+        .hidden { display: none !important; }
+        .char-counter { font-size: 0.7rem; color: #64748b; text-align: right; margin-top: 4px; }
+        .required-field::after { content: " *"; color: #ef4444; }
+        /* Modales */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 700px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { margin: 0; color: var(--primary-color); }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; }
+        .template-list, .establecimiento-list { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.85rem; }
+        .template-list th, .establecimiento-list th { background: #f1f5f9; padding: 8px; text-align: left; font-size: 0.75rem; color: #475569; text-transform: uppercase; }
+        .template-list td, .establecimiento-list td { padding: 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        .btn-edit, .btn-delete-tmpl, .btn-edit-est, .btn-delete-est { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 600; margin-right: 4px; }
+        .btn-edit, .btn-edit-est { background: #3b82f6; color: white; }
+        .btn-delete-tmpl, .btn-delete-est { background: #ef4444; color: white; }
+        .btn-add { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
+        .btn-cancel { background: #cbd5e1; color: #1e293b; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; margin-bottom: 0; }
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #form-container { max-width: 100%; height: 55vh; resize: vertical; }
+            #preview-container { height: 45vh; padding: 10px; }
+            #note-to-print { transform: scale(0.55); transform-origin: top center; margin-bottom: -120mm; }
+            .modal-content { width: 95%; max-height: 90vh; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <h2>🔐 Acceso al Sistema Clínico</h2>
+            <input type="text" id="loginUser" placeholder="Usuario" autocomplete="off">
+            <input type="password" id="loginPass" placeholder="Contraseña">
+            <button id="loginBtn">Ingresar</button>
+            <div id="loginError" class="error-msg"></div>
+            <div style="font-size: 0.7rem; margin-top: 15px; color: #666;">Usuario: medico  /  Contraseña: clinica2024</div>
+        </div>
+    </div>
+
+    <!-- Contenido principal del sistema (inicialmente oculto) -->
+    <div id="mainApp" style="display: none; width: 100%; flex-direction: row;">
+        <div id="form-container">
+            <div class="header-logout">
+                <button id="logoutBtn" class="logout-btn">🚪 Cerrar sesión</button>
+            </div>
+            <h2>Sistema Clínico NOM-004</h2>
+            <div class="tabs">
+                <button type="button" id="tab-consulta" class="tab-btn active">Consulta / Evolución</button>
+                <button type="button" id="tab-ingreso" class="tab-btn">Ingreso</button>
+                <button type="button" id="tab-egreso" class="tab-btn">Egreso</button>
+            </div>
+            <div class="section-toggle">
+                <h4>Identificación del Paciente</h4>
+                <div class="form-group">
+                    <div class="select-with-button">
+                        <div style="flex:1;">
+                            <label>Establecimiento:</label>
+                            <select id="in-establecimiento">
+                                <option value="Centro Médico Yaaxché">Centro Médico Yaaxché</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-manage-establecimientos" id="btnGestionarEstablecimientos">📋 Gestionar</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="row-flex">
+                        <label style="margin:0; min-width:80px;">Fecha Nota:</label>
+                        <input type="text" id="in-fecha" placeholder="DD-MM-AAAA" maxlength="10">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="row-flex">
+                        <input type="checkbox" checked class="check-ctrl" id="checkMuestraPaciente">
+                        <input id="in-paciente" list="lista-pacientes" placeholder="Nombre completo del paciente">
+                        <datalist id="lista-pacientes"></datalist>
+                    </div>
+                    <div class="row-flex" style="margin-top: 8px;">
+                        <button type="button" class="btn-db btn-save" id="guardarPacienteBtn">Guardar Paciente</button>
+                        <button type="button" class="btn-db btn-delete" id="eliminarPacienteBtn">Eliminar</button>
+                    </div>
+                </div>
+                <div class="row-flex">
+                    <div class="form-group" style="flex:1;">
+                        <label>F. Nacimiento:</label>
+                        <input type="text" id="in-nacimiento" placeholder="DD-MM-AAAA" maxlength="10">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Edad:</label>
+                        <input id="in-edad" placeholder="Años">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Sexo:</label>
+                        <select id="in-sexo">
+                            <option>Masculino</option>
+                            <option>Femenino</option>
+                            <option>No binario</option>
+                            <option>Prefiero no decirlo</option>
+                            <option>Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Número de Expediente:</label>
+                    <input id="in-expediente" placeholder="Ej. EXP-2024-0001">
+                </div>
+            </div>
+            <div class="section-toggle form-ingreso-egreso hidden">
+                <h4>Estancia Hospitalaria</h4>
+                <div class="row-flex">
+                    <div class="form-group" style="flex:1;">
+                        <label>Fecha de Ingreso</label>
+                        <input type="text" id="in-fecha-ingreso" placeholder="DD-MM-AAAA" maxlength="10">
+                    </div>
+                    <div class="form-group form-egreso-only hidden" style="flex:1;">
+                        <label>Fecha de Egreso</label>
+                        <input type="text" id="in-fecha-egreso" placeholder="DD-MM-AAAA" maxlength="10">
+                    </div>
+                </div>
+            </div>
+            <div class="section-toggle">
+                <h4>Signos Vitales y Somatometría</h4>
+                <div class="grid-vitals">
+                    <div class="vital-box"><label>TA (mmHg)</label><input id="in-ta" placeholder="120/80"></div>
+                    <div class="vital-box"><label>FC (lpm)</label><input id="in-fc" placeholder="80"></div>
+                    <div class="vital-box"><label>FR (rpm)</label><input id="in-fr" placeholder="18"></div>
+                    <div class="vital-box"><label>T° (°C)</label><input id="in-temp" placeholder="36.5"></div>
+                    <div class="vital-box"><label>Sat (%)</label><input id="in-sat" placeholder="98"></div>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <label style="display:inline; font-weight: normal; cursor: pointer;"><input type="checkbox" checked id="check-vitals-row" class="check-ctrl"> Mostrar barra de signos vitales en PDF</label>
+                </div>
+            </div>
+            <div class="section-toggle" id="contenedor-clinico">
+                <h4>Evolución Clínica</h4>
+                <div class="template-tools">
+                    <label style="width: 100%;">Cargar Cuadro Clínico Predefinido</label>
+                    <select id="select-plantilla">
+                        <option value="">-- Seleccionar Patología --</option>
+                    </select>
+                    <button type="button" class="btn-manage-templates" id="btnGestionarPlantillas">⚙️ Gestionar Plantillas (Agregar / Editar / Eliminar)</button>
+                </div>
+                <div class="form-group form-ingreso-only hidden">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkAntecedentes"><label>Antecedentes Heredofamiliares y Personales</label></div>
+                    <textarea id="in-antecedentes" rows="3" placeholder="Antecedentes patológicos, quirúrgicos, traumáticos, alergias, etc."></textarea>
+                    <div class="char-counter" id="counter-antecedentes">0 caracteres</div>
+                </div>
+                <div class="form-group form-egreso-only hidden">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkMotivoEgreso"><label>Motivo de Egreso</label></div>
+                    <input id="in-motivo-egreso" placeholder="Ej. Máximo beneficio, Alta voluntaria, Traslado...">
+                </div>
+                <div class="form-group form-egreso-only hidden">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkDxIngreso"><label>Diagnóstico de Ingreso</label></div>
+                    <textarea id="in-dx-ingreso" style="min-height: 40px;" placeholder="Diagnóstico al momento del ingreso"></textarea>
+                </div>
+                <div class="form-group form-egreso-only hidden">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkDxEgreso"><label>Diagnósticos Finales (Egreso)</label></div>
+                    <textarea id="in-dx-egreso" style="min-height: 40px;" placeholder="Diagnósticos principal y secundarios al egreso"></textarea>
+                </div>
+                <div class="form-group form-egreso-only hidden">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkResumen"><label>Resumen de Evolución y Estado Actual</label></div>
+                    <textarea id="in-resumen" style="height: 100px;" placeholder="Resumen clínico, evolución durante estancia, estado actual al egreso"></textarea>
+                </div>
+                <div class="form-group form-consulta-ingreso">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkPadecimiento"><label>Resumen de Interrogatorio / Padecimiento Actual</label></div>
+                    <textarea id="in-padecimiento" rows="3" placeholder="Motivo de consulta, tiempo de evolución, características del padecimiento"></textarea>
+                    <div class="char-counter" id="counter-padecimiento">0 caracteres</div>
+                </div>
+                <div class="form-group form-consulta-ingreso">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkExploracion"><label>Exploración Física</label></div>
+                    <div class="quick-scales">
+                        <button class="quick-btn" data-texto="EVA: /10">Escala EVA</button>
+                        <button class="quick-btn" data-texto="Fuerza Muscular (Daniels): /5">Escala Daniels</button>
+                        <button class="quick-btn" data-texto="Llenado capilar < 2 seg. Pulsos distales presentes.">Estado Neurovascular</button>
+                    </div>
+                    <textarea id="in-exploracion" rows="4" placeholder="Hallazgos a la exploración física por aparatos y sistemas"></textarea>
+                    <div class="char-counter" id="counter-exploracion">0 caracteres</div>
+                </div>
+                <div class="form-group">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkEstudios"><label>Resultados de Estudios (Laboratorio y Gabinete)</label></div>
+                    <textarea id="in-estudios" placeholder="Radiografías, BH, QS, etc. o 'Sin estudios recientes'." style="min-height: 40px;"></textarea>
+                </div>
+                <div class="form-group form-consulta-ingreso">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkDiagnostico"><label>Diagnóstico(s)</label></div>
+                    <textarea id="in-diagnostico" style="min-height: 40px;" placeholder="Diagnóstico principal y diferenciales"></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkPlan"><label id="label-plan">Manejo, Tratamiento y Recomendaciones</label></div>
+                    <textarea id="in-plan" style="height: 100px;" placeholder="Plan de manejo, tratamiento farmacológico y no farmacológico, indicaciones médicas"></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="row-flex"><input type="checkbox" checked class="check-ctrl" id="checkPronostico"><label>Pronóstico</label></div>
+                    <input id="in-pronostico" placeholder="Ej. Favorable para la vida y la función.">
+                </div>
+            </div>
+            <button type="button" class="action-btn btn-pdf" id="generarPdfBtn">📄 GENERAR PDF (Cumple NOM-004)</button>
+            <button type="button" class="action-btn btn-clear" id="borrarFormBtn">Borrar Formulario</button>
+            <div class="section-toggle">
+                <h4>Médico Tratante</h4>
+                <div class="form-group">
+                    <label class="required-field">Nombre del Médico</label>
+                    <input id="in-medico" value="DR. DIEGO ALEJANDRO MANZANILLA RODRIGUEZ">
+                </div>
+                <div class="form-group">
+                    <label>Cédula Profesional / Especialidad</label>
+                    <input id="in-cedula" value="Céd. Prof. 14930089 | Traumatología y Ortopedia">
+                </div>
+            </div>
+            <div class="section-toggle">
+                <h4>Ajuste de Impresión (Membrete)</h4>
+                <div class="form-group">
+                    <label>Inicio del texto (Margen Superior en mm)</label>
+                    <input type="range" id="slider-texto" min="50" max="150" value="95">
+                </div>
+                <div class="form-group" style="border-top:1px solid #e2e8f0; padding-top:10px; margin-top:10px;">
+                    <div class="row-flex">
+                        <input type="checkbox" checked class="check-ctrl" id="check-membrete">
+                        <label style="margin:0;">Fondo Membrete Institucional (JPG/PNG)</label>
+                    </div>
+                    <input type="file" id="upload-membrete" accept="image/*" style="font-size: 0.75rem; padding: 5px; margin-top: 5px; border:none; background:#f8fafc;">
+                </div>
+            </div>
+        </div>
+        <div id="preview-container">
+            <div id="note-to-print">
+                <div id="text-layer">
+                    <div id="out-establecimiento" style="text-align:right; font-weight:bold; font-size:8.5pt; color: #555; margin-bottom:5px;"></div>
+                    <div id="out-titulo-nota" style="text-align:center; font-weight:bold; font-size:11.5pt; margin-bottom:12px; text-transform:uppercase; color: var(--primary-color);"></div>
+                    <div class="header-data" id="out-row-paciente">
+                        <div><strong>PACIENTE:</strong> <span id="out-paciente" style="text-transform: uppercase;"></span></div>
+                        <div><strong>FECHA:</strong> <span id="out-fecha"></span> <span id="out-hora"></span></div>
+                    </div>
+                    <div style="display:flex; justify-content: space-between; margin-bottom:10px; font-size:9pt; border-bottom: 1px dashed #ccc; padding-bottom: 5px;">
+                        <span><strong>F. NACIMIENTO:</strong> <span id="out-nacimiento"></span></span>
+                        <span><strong>EDAD:</strong> <span id="out-edad"></span> | <strong>SEXO:</strong> <span id="out-sexo"></span></span>
+                        <span><strong>EXPEDIENTE:</strong> <span id="out-expediente"></span></span>
+                    </div>
+                    <div style="margin-bottom:10px; font-size:9pt; text-align:center;" class="pdf-ingreso-egreso hidden" id="out-row-estancia">
+                        <strong>INGRESO:</strong> <span id="out-fecha-ingreso"></span>
+                        <span class="pdf-egreso-only hidden"> &nbsp;&nbsp;|&nbsp;&nbsp; <strong>EGRESO:</strong> <span id="out-fecha-egreso"></span></span>
+                    </div>
+                    <div class="vitals-row" id="out-row-vitals">
+                        <span><strong>TA:</strong> <span id="out-ta"></span> mmHg</span>
+                        <span><strong>FC:</strong> <span id="out-fc"></span> lpm</span>
+                        <span><strong>FR:</strong> <span id="out-fr"></span> rpm</span>
+                        <span><strong>T°:</strong> <span id="out-temp"></span> °C</span>
+                        <span><strong>SatO2:</strong> <span id="out-sat"></span> %</span>
+                    </div>
+                    <div class="clinical-section pdf-ingreso-only hidden" id="out-sec-antecedentes">
+                        <div class="section-title">Antecedentes Importantes</div>
+                        <div class="content-box" id="out-antecedentes"></div>
+                    </div>
+                    <div class="clinical-section pdf-egreso-only hidden" id="out-sec-motivo-egreso">
+                        <div class="section-title">Motivo de Egreso</div>
+                        <div class="content-box" id="out-motivo-egreso"></div>
+                    </div>
+                    <div class="clinical-section pdf-egreso-only hidden" id="out-sec-dx-ingreso">
+                        <div class="section-title">Diagnóstico de Ingreso</div>
+                        <div class="content-box" id="out-dx-ingreso"></div>
+                    </div>
+                    <div class="clinical-section pdf-egreso-only hidden" id="out-sec-dx-egreso">
+                        <div class="section-title">Diagnósticos Finales</div>
+                        <div class="content-box" id="out-dx-egreso"></div>
+                    </div>
+                    <div class="clinical-section pdf-egreso-only hidden" id="out-sec-resumen">
+                        <div class="section-title">Resumen Clínico y Evolución</div>
+                        <div class="content-box" id="out-resumen"></div>
+                    </div>
+                    <div class="clinical-section pdf-consulta-ingreso" id="out-sec-padecimiento">
+                        <div class="section-title">Padecimiento Actual / Interrogatorio</div>
+                        <div class="content-box" id="out-padecimiento"></div>
+                    </div>
+                    <div class="clinical-section pdf-consulta-ingreso" id="out-sec-exploracion">
+                        <div class="section-title">Exploración Física</div>
+                        <div class="content-box" id="out-exploracion"></div>
+                    </div>
+                    <div class="clinical-section" id="out-sec-estudios">
+                        <div class="section-title">Resultados de Estudios</div>
+                        <div class="content-box" id="out-estudios"></div>
+                    </div>
+                    <div class="clinical-section pdf-consulta-ingreso" id="out-sec-diagnostico">
+                        <div class="section-title">Diagnóstico</div>
+                        <div class="content-box" id="out-diagnostico"></div>
+                    </div>
+                    <div class="clinical-section" id="out-sec-plan">
+                        <div class="section-title" id="out-label-plan">Plan, Tratamiento y Recomendaciones</div>
+                        <div class="content-box" id="out-plan"></div>
+                    </div>
+                    <div class="clinical-section" id="out-sec-pronostico">
+                        <div class="section-title">Pronóstico</div>
+                        <div class="content-box" id="out-pronostico"></div>
+                    </div>
+                </div>
+                <div id="footer-layer">
+                    <div style="height: 30px;"></div>
+                    <div class="signature-line"></div>
+                    <div style="font-size:9.5pt; font-weight:bold; position: relative; z-index: 2;" id="out-medico"></div>
+                    <div style="font-size:8.5pt; color: #333; position: relative; z-index: 2;" id="out-cedula"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== SISTEMA DE LOGIN ==========
+        let validUser = "medico";
+        let validPass = "clinica2024";
+
+        function checkSession() {
+            const loggedIn = sessionStorage.getItem("loggedIn");
+            if (loggedIn === "true") {
+                document.getElementById("loginOverlay").style.display = "none";
+                document.getElementById("mainApp").style.display = "flex";
+                iniciarSistema();
+            } else {
+                document.getElementById("loginOverlay").style.display = "flex";
+                document.getElementById("mainApp").style.display = "none";
+            }
+        }
+
+        function login() {
+            const user = document.getElementById("loginUser").value.trim();
+            const pass = document.getElementById("loginPass").value.trim();
+            const errorDiv = document.getElementById("loginError");
+            if (user === validUser && pass === validPass) {
+                sessionStorage.setItem("loggedIn", "true");
+                checkSession();
+            } else {
+                errorDiv.innerText = "Usuario o contraseña incorrectos";
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem("loggedIn");
+            location.reload();
+        }
+
+        // ========== FUNCIONES DEL SISTEMA CLÍNICO (COMPLETAS) ==========
+        let currentNoteType = 'consulta';
+
+        // Plantillas predefinidas (completas)
+        const plantillasDefecto = {
+            'radio': {
+                nombre: 'Fractura de Radio Distal (Colles)',
+                tipo: 'consulta',
+                padecimiento: "Paciente acude a valoración por dolor agudo, edema y deformidad en muñeca tras sufrir caída de su propia altura con mecanismo de apoyo en extensión.",
+                exploracion: "Inspección: Aumento de volumen y deformidad en 'dorso de tenedor'. Palpación: Dolor intenso, crepitación ósea. Llenado capilar < 2 seg.",
+                estudios: "Radiografías AP y Lateral de muñeca muestran trazo de fractura metafisaria distal de radio con desplazamiento dorsal y acortamiento.",
+                diagnostico: "Fractura cerrada de la extremidad distal del radio (Colles).",
+                plan: "1. Inmovilización con férula braquipalmar.\n2. Analgesia: Ketorolaco 10mg VO c/8h por 3 días.\n3. Cita de revaloración para decidir conducta quirúrgica.\n4. Vigilar datos de alarma neurovascular.",
+                pronostico: "Reservado a evolución y consolidación ósea."
+            },
+            'esguince': {
+                nombre: 'Esguince de Tobillo Grado II',
+                tipo: 'consulta',
+                padecimiento: "Mecanismo de inversión forzada de tobillo durante la marcha. Dolor localizado en región externa y aumento de volumen.",
+                exploracion: "Edema bimaléolar. Dolor exquisito a palpación de ligamento peroneoastragalino anterior. Cajón anterior negativo. Movilidad conservada.",
+                estudios: "Radiografía AP, Lateral y Mortaja de tobillo sin evidencia de trazo de fractura.",
+                diagnostico: "Esguince de tobillo grado II.",
+                plan: "1. Protocolo RICE (Reposo, hielo, compresión, elevación).\n2. Ibuprofeno 400mg VO c/8h por 5 días.\n3. Cita de control en 7 días.",
+                pronostico: "Favorable para la función a mediano plazo."
+            },
+            'lumbalgia': {
+                nombre: 'Lumbalgia Mecánica Aguda',
+                tipo: 'consulta',
+                padecimiento: "Paciente refiere inicio de dolor lumbar intenso tras esfuerzo físico por carga de objetos pesados. Dolor irradiado ocasionalmente hacia glúteo, sin sobrepasar rodilla. Niega alteraciones de esfínteres.",
+                exploracion: "Marcha claudicante. Contractura muscular paravertebral lumbar bilateral. Puntos de Valleix positivos. Maniobra de Lasègue y Bragard negativos. Reflejos osteotendinosos y fuerza muscular conservados.",
+                estudios: "Sin estudios recientes. Se solicitan radiografías de columna lumbosacra.",
+                diagnostico: "Lumbalgia mecánica aguda / Espasmo muscular paravertebral.",
+                plan: "1. Reposo relativo. 2. Calor local. 3. Meloxicam/Metocarbamol. 4. Cita abierta a urgencias.",
+                pronostico: "Favorable con apego al tratamiento."
+            },
+            'gonartrosis': {
+                nombre: 'Gonartrosis (Osteoartritis)',
+                tipo: 'consulta',
+                padecimiento: "Dolor de rodilla crónico, progresivo que exacerba al subir escaleras. Rigidez matutina menor a 30 minutos.",
+                exploracion: "Alineación en varo. Crepitación articular. Dolor en interlínea medial. Arcos de movilidad limitados.",
+                estudios: "Radiografías: disminución del espacio articular medial, esclerosis subcondral y osteofitos.",
+                diagnostico: "Osteoartritis de rodilla grado III de Kellgren-Lawrence.",
+                plan: "1. Higiene articular. 2. Ejercicios de cuádriceps. 3. Paracetamol. 4. Condroprotectores.",
+                pronostico: "Reservado, progresivo."
+            },
+            'hombro': {
+                nombre: 'Luxación Anterior de Hombro',
+                tipo: 'consulta',
+                padecimiento: "Dolor intenso e impotencia funcional tras caída. Sensación de inestabilidad.",
+                exploracion: "Hombro en 'charretera', pérdida del contorno deltoideo. Dolor a la movilización.",
+                estudios: "Radiografías confirman luxación anterior de la cabeza humeral.",
+                diagnostico: "Luxación anterior aguda de articulación glenohumeral.",
+                plan: "1. Reducción cerrada bajo sedación. 2. Inmovilización tipo Velpeau. 3. Analgesia. 4. Control radiográfico.",
+                pronostico: "Favorable, con riesgo de recidiva."
+            },
+            'tunel': {
+                nombre: 'Síndrome del Túnel Carpiano',
+                tipo: 'consulta',
+                padecimiento: "Parestesias y dolor en territorio del nervio mediano de predominio nocturno. Debilidad para sujetar objetos.",
+                exploracion: "Atrofia de eminencia tenar. Signo de Tinel y Phalen positivos.",
+                estudios: "Electromiografía: neuropatía compresiva del nervio mediano.",
+                diagnostico: "Síndrome del Túnel Carpiano.",
+                plan: "1. Tratamiento quirúrgico: liberación del túnel del carpo. 2. Consentimiento informado. 3. Estudios preoperatorios.",
+                pronostico: "Bueno para la función postoperatoria."
+            },
+            'dedo': {
+                nombre: 'Dedo en Gatillo',
+                tipo: 'consulta',
+                padecimiento: "Dolor y atrapamiento al flexionar el dedo. Requiere extensión pasiva asistida.",
+                exploracion: "Nódulo palpable en polea A1. Bloqueo intermitente.",
+                estudios: "Diagnóstico clínico.",
+                diagnostico: "Dedo en gatillo (tenosinovitis estenosante de polea A1).",
+                plan: "1. Infiltración con corticosteroide vs liberación quirúrgica. 2. Procedimiento ambulatorio.",
+                pronostico: "Bueno postratamiento."
+            },
+            'postop': {
+                nombre: 'Control Postoperatorio',
+                tipo: 'consulta',
+                padecimiento: "Control postquirúrgico. Dolor leve controlado. Sin fiebre ni sangrado.",
+                exploracion: "Herida quirúrgica limpia, sin signos de infección. Retiro de puntos sin complicaciones.",
+                estudios: "Radiografías de control muestran adecuada alineación.",
+                diagnostico: "Estado postoperatorio de osteosíntesis sin complicaciones.",
+                plan: "1. Cuidados de herida. 2. Suspensión gradual de analgesia. 3. Rehabilitación. 4. Control en 4 semanas.",
+                pronostico: "Favorable."
+            },
+            'egreso_artritis': {
+                nombre: 'EGRESO: Artritis Séptica de Rodilla',
+                tipo: 'egreso',
+                motivoEgreso: "Mejoría clínica y resolución del cuadro infeccioso.",
+                dxIngreso: "Artritis séptica de rodilla derecha.",
+                dxEgreso: "Artritis séptica de rodilla derecha resuelta.",
+                resumen: "Ingresó por dolor, aumento de volumen y fiebre. Se realizó artrotomía y lavado. Evolucionó favorablemente.",
+                plan: "1. Antibiótico oral por 14 días. 2. Control en 7 días. 3. Rehabilitación.",
+                pronostico: "Reservado a rehabilitación."
+            }
+        };
+
+        function obtenerPlantillas() {
+            const guardadas = JSON.parse(localStorage.getItem('plantillas_personalizadas')) || {};
+            return { ...plantillasDefecto, ...guardadas };
+        }
+        function guardarPlantillasPersonalizadas(plantillas) { localStorage.setItem('plantillas_personalizadas', JSON.stringify(plantillas)); }
+        function getPlantillasPersonalizadas() { return JSON.parse(localStorage.getItem('plantillas_personalizadas')) || {}; }
+
+        function actualizarSelectPlantillas() {
+            const select = document.getElementById('select-plantilla');
+            const plantillas = obtenerPlantillas();
+            select.innerHTML = '<option value="">-- Seleccionar Patología --</option>';
+            const grupos = { consulta: [], ingreso: [], egreso: [] };
+            for (let key in plantillas) {
+                const p = plantillas[key];
+                const tipo = p.tipo || 'consulta';
+                grupos[tipo].push({ key, nombre: p.nombre || key });
+            }
+            for (let tipo of ['consulta', 'ingreso', 'egreso']) {
+                if (grupos[tipo].length) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = tipo === 'consulta' ? '📋 Consulta / Evolución' : (tipo === 'ingreso' ? '🏥 Ingreso' : '🚪 Egreso');
+                    grupos[tipo].forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.key;
+                        option.textContent = item.nombre;
+                        optgroup.appendChild(option);
+                    });
+                    select.appendChild(optgroup);
+                }
+            }
+        }
+
+        // === GESTIÓN DE ESTABLECIMIENTOS ===
+        function obtenerEstablecimientos() {
+            const guardados = JSON.parse(localStorage.getItem('establecimientos_lista')) || [];
+            if (guardados.length === 0) {
+                const defaultEst = ["Centro Médico Yaaxché", "Hospital General", "Clínica San Ángel", "Consultorio Particular"];
+                localStorage.setItem('establecimientos_lista', JSON.stringify(defaultEst));
+                return defaultEst;
+            }
+            return guardados;
+        }
+        function guardarEstablecimientos(establecimientos) {
+            localStorage.setItem('establecimientos_lista', JSON.stringify(establecimientos));
+            actualizarSelectEstablecimientos();
+        }
+        function actualizarSelectEstablecimientos() {
+            const select = document.getElementById('in-establecimiento');
+            const establecimientos = obtenerEstablecimientos();
+            const valorActual = select.value;
+            select.innerHTML = '';
+            establecimientos.forEach(est => {
+                const option = document.createElement('option');
+                option.value = est;
+                option.textContent = est;
+                if (est === valorActual) option.selected = true;
+                select.appendChild(option);
+            });
+            if (select.options.length > 0 && !valorActual) select.selectedIndex = 0;
+            sync();
+        }
+        function abrirGestorEstablecimientos() {
+            const existente = document.getElementById('modal-establecimientos');
+            if (existente) existente.remove();
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.id = 'modal-establecimientos';
+            overlay.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header"><h3>🏥 Gestión de Establecimientos</h3><button class="modal-close" id="cerrarEstModal">✖</button></div>
+                    <div class="modal-body" id="modal-body-establecimientos"></div>
+                    <div class="modal-footer"><button class="btn-add" id="nuevoEstBtn">➕ Nuevo Establecimiento</button><button class="btn-cancel" id="cancelarEstModal">Cerrar</button></div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            document.getElementById('cerrarEstModal').onclick = cerrarGestorEstablecimientos;
+            document.getElementById('cancelarEstModal').onclick = cerrarGestorEstablecimientos;
+            document.getElementById('nuevoEstBtn').onclick = () => mostrarFormularioAgregarEstablecimiento();
+            cargarTablaEstablecimientos();
+        }
+        function cerrarGestorEstablecimientos() {
+            const modal = document.getElementById('modal-establecimientos');
+            if (modal) modal.remove();
+            actualizarSelectEstablecimientos();
+        }
+        function cargarTablaEstablecimientos() {
+            const establecimientos = obtenerEstablecimientos();
+            let html = `<table class="establecimiento-list"><thead><th>Nombre</th><th>Acciones</th></thead><tbody>`;
+            establecimientos.forEach((est, idx) => {
+                html += `<tr><td><strong>${escapeHtml(est)}</strong></td><td><button class="btn-edit-est" data-index="${idx}">✏️ Editar</button><button class="btn-delete-est" data-index="${idx}">🗑️ Eliminar</button></td></tr>`;
+            });
+            html += `</tbody></table><div id="form-editar-establecimiento" style="margin-top:15px;"></div>`;
+            document.getElementById('modal-body-establecimientos').innerHTML = html;
+            document.querySelectorAll('.btn-edit-est').forEach(btn => btn.onclick = () => editarEstablecimiento(parseInt(btn.dataset.index)));
+            document.querySelectorAll('.btn-delete-est').forEach(btn => btn.onclick = () => eliminarEstablecimiento(parseInt(btn.dataset.index)));
+        }
+        let establecimientoEditandoIndex = null;
+        function mostrarFormularioAgregarEstablecimiento() {
+            establecimientoEditandoIndex = null;
+            const contenedor = document.getElementById('form-editar-establecimiento');
+            contenedor.innerHTML = `<h4>Nuevo Establecimiento</h4><div class="form-group"><label>Nombre</label><input type="text" id="est-nombre" placeholder="Ej. Hospital Regional"></div><button class="btn-add" id="guardarEstBtn">💾 Guardar</button>`;
+            document.getElementById('guardarEstBtn').onclick = guardarCambiosEstablecimiento;
+            document.getElementById('est-nombre').focus();
+        }
+        function editarEstablecimiento(index) {
+            establecimientoEditandoIndex = index;
+            const establecimientos = obtenerEstablecimientos();
+            const contenedor = document.getElementById('form-editar-establecimiento');
+            contenedor.innerHTML = `<h4>Editar Establecimiento</h4><div class="form-group"><label>Nombre</label><input type="text" id="est-nombre" value="${escapeAttr(establecimientos[index])}"></div><button class="btn-add" id="guardarEstBtn">💾 Actualizar</button><button class="btn-cancel" id="cancelarEstEdicionBtn">Cancelar</button>`;
+            document.getElementById('guardarEstBtn').onclick = guardarCambiosEstablecimiento;
+            document.getElementById('cancelarEstEdicionBtn').onclick = () => { establecimientoEditandoIndex = null; cargarTablaEstablecimientos(); };
+            document.getElementById('est-nombre').focus();
+        }
+        function guardarCambiosEstablecimiento() {
+            const nuevoNombre = document.getElementById('est-nombre').value.trim();
+            if (!nuevoNombre) { alert('El nombre es requerido'); return; }
+            let establecimientos = obtenerEstablecimientos();
+            if (establecimientoEditandoIndex !== null) {
+                establecimientos[establecimientoEditandoIndex] = nuevoNombre;
+            } else {
+                if (establecimientos.includes(nuevoNombre)) { alert('Ya existe'); return; }
+                establecimientos.push(nuevoNombre);
+            }
+            guardarEstablecimientos(establecimientos);
+            cerrarGestorEstablecimientos();
+        }
+        function eliminarEstablecimiento(index) {
+            let establecimientos = obtenerEstablecimientos();
+            if (confirm(`¿Eliminar "${establecimientos[index]}"?`)) {
+                establecimientos.splice(index, 1);
+                if (establecimientos.length === 0) establecimientos = ["Centro Médico Yaaxché"];
+                guardarEstablecimientos(establecimientos);
+                cerrarGestorEstablecimientos();
+            }
+        }
+
+        // === GESTIÓN DE PLANTILLAS (MODAL) ===
+        let plantillaEditandoClave = null;
+        function abrirGestorPlantillas() {
+            const existente = document.getElementById('modal-plantillas');
+            if (existente) existente.remove();
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.id = 'modal-plantillas';
+            overlay.innerHTML = `<div class="modal-content"><div class="modal-header"><h3>📋 Gestión de Plantillas</h3><button class="modal-close" id="cerrarPlantillasModal">✖</button></div><div class="modal-body" id="modal-body-plantillas"></div><div class="modal-footer"><button class="btn-add" id="nuevaPlantillaBtn">➕ Nueva</button><button class="btn-cancel" id="cancelarPlantillasModal">Cerrar</button></div></div>`;
+            document.body.appendChild(overlay);
+            document.getElementById('cerrarPlantillasModal').onclick = cerrarGestorPlantillas;
+            document.getElementById('cancelarPlantillasModal').onclick = cerrarGestorPlantillas;
+            document.getElementById('nuevaPlantillaBtn').onclick = () => mostrarFormularioAgregarPlantilla();
+            cargarTablaPlantillas();
+        }
+        function cerrarGestorPlantillas() { document.getElementById('modal-plantillas')?.remove(); plantillaEditandoClave = null; actualizarSelectPlantillas(); }
+        function cargarTablaPlantillas() {
+            const plantillas = obtenerPlantillas();
+            const personalizadas = getPlantillasPersonalizadas();
+            let html = `<table class="template-list"><thead><th>Nombre</th><th>Tipo</th><th>Acciones</th></thead><tbody>`;
+            for (let key in plantillas) {
+                const p = plantillas[key];
+                const esPersonalizada = personalizadas.hasOwnProperty(key);
+                html += `<tr><td><strong>${escapeHtml(p.nombre || key)}</strong>${esPersonalizada ? ' ✏️' : ''}</td><td>${(p.tipo || 'consulta').toUpperCase()}</td><td><button class="btn-edit" data-clave="${escapeAttr(key)}">✏️ Editar</button> ${esPersonalizada ? `<button class="btn-delete-tmpl" data-clave="${escapeAttr(key)}">🗑️ Eliminar</button>` : '<span style="font-size:0.7rem;">Por defecto</span>'}</td></tr>`;
+            }
+            html += `</tbody></table><div id="form-editar-plantilla" style="margin-top:15px;"></div>`;
+            document.getElementById('modal-body-plantillas').innerHTML = html;
+            document.querySelectorAll('.btn-edit').forEach(btn => btn.onclick = () => editarPlantilla(btn.dataset.clave));
+            document.querySelectorAll('.btn-delete-tmpl').forEach(btn => btn.onclick = () => eliminarPlantilla(btn.dataset.clave));
+        }
+        function mostrarFormularioAgregarPlantilla() { plantillaEditandoClave = null; mostrarFormularioPlantilla({}, ''); }
+        function editarPlantilla(clave) { plantillaEditandoClave = clave; const plantillas = obtenerPlantillas(); mostrarFormularioPlantilla(plantillas[clave], clave); }
+        function mostrarFormularioPlantilla(datos, clave) {
+            const esNueva = !clave;
+            const contenedor = document.getElementById('form-editar-plantilla');
+            contenedor.innerHTML = `<h4>${esNueva ? 'Nueva Plantilla' : 'Editar: ' + escapeHtml(datos.nombre || clave)}</h4>
+            <div class="form-row"><div class="form-group"><label>Clave ID</label><input type="text" id="tmpl-clave" value="${escapeAttr(clave)}" ${!esNueva ? 'disabled' : ''}></div>
+            <div class="form-group"><label>Nombre</label><input id="tmpl-nombre" value="${escapeAttr(datos.nombre || '')}"></div>
+            <div class="form-group"><label>Tipo</label><select id="tmpl-tipo"><option value="consulta" ${(datos.tipo||'consulta')==='consulta'?'selected':''}>Consulta</option><option value="ingreso" ${datos.tipo==='ingreso'?'selected':''}>Ingreso</option><option value="egreso" ${datos.tipo==='egreso'?'selected':''}>Egreso</option></select></div></div>
+            <div class="form-group"><label>Padecimiento</label><textarea id="tmpl-padecimiento" rows="2">${escapeHtml(datos.padecimiento||'')}</textarea></div>
+            <div class="form-group"><label>Exploración</label><textarea id="tmpl-exploracion" rows="2">${escapeHtml(datos.exploracion||'')}</textarea></div>
+            <div class="form-group"><label>Estudios</label><textarea id="tmpl-estudios">${escapeHtml(datos.estudios||'')}</textarea></div>
+            <div class="form-group"><label>Diagnóstico</label><textarea id="tmpl-diagnostico">${escapeHtml(datos.diagnostico||'')}</textarea></div>
+            <div class="form-group"><label>Plan</label><textarea id="tmpl-plan" rows="3">${escapeHtml(datos.plan||'')}</textarea></div>
+            <div class="form-group"><label>Pronóstico</label><input id="tmpl-pronostico" value="${escapeAttr(datos.pronostico||'')}"></div>
+            <div id="tmpl-egreso-fields" style="display:${(datos.tipo||'consulta')==='egreso'?'block':'none'};">
+                <label>Motivo Egreso</label><input id="tmpl-motivoEgreso" value="${escapeAttr(datos.motivoEgreso||'')}">
+                <label>Dx Ingreso</label><textarea id="tmpl-dxIngreso">${escapeHtml(datos.dxIngreso||'')}</textarea>
+                <label>Dx Egreso</label><textarea id="tmpl-dxEgreso">${escapeHtml(datos.dxEgreso||'')}</textarea>
+                <label>Resumen</label><textarea id="tmpl-resumen">${escapeHtml(datos.resumen||'')}</textarea>
+            </div>
+            <div class="form-group"><label>Antecedentes</label><textarea id="tmpl-antecedentes">${escapeHtml(datos.antecedentes||'')}</textarea></div>
+            <button class="btn-add" id="guardarPlantillaBtn">💾 Guardar</button>${!esNueva ? '<button class="btn-cancel" id="cancelarEdicionPlantillaBtn">Cancelar</button>' : ''}`;
+            document.getElementById('guardarPlantillaBtn').onclick = guardarCambiosPlantilla;
+            if (!esNueva) document.getElementById('cancelarEdicionPlantillaBtn').onclick = cancelarEdicionPlantilla;
+            document.getElementById('tmpl-tipo').onchange = function() { document.getElementById('tmpl-egreso-fields').style.display = this.value === 'egreso' ? 'block' : 'none'; };
+        }
+        function guardarCambiosPlantilla() {
+            let clave = document.getElementById('tmpl-clave').value.trim();
+            if (!clave) { alert('Clave requerida'); return; }
+            const personalizadas = getPlantillasPersonalizadas();
+            const nueva = {
+                nombre: document.getElementById('tmpl-nombre').value.trim(),
+                tipo: document.getElementById('tmpl-tipo').value,
+                padecimiento: document.getElementById('tmpl-padecimiento').value,
+                exploracion: document.getElementById('tmpl-exploracion').value,
+                estudios: document.getElementById('tmpl-estudios').value,
+                diagnostico: document.getElementById('tmpl-diagnostico').value,
+                plan: document.getElementById('tmpl-plan').value,
+                pronostico: document.getElementById('tmpl-pronostico').value,
+                motivoEgreso: document.getElementById('tmpl-motivoEgreso')?.value || '',
+                dxIngreso: document.getElementById('tmpl-dxIngreso')?.value || '',
+                dxEgreso: document.getElementById('tmpl-dxEgreso')?.value || '',
+                resumen: document.getElementById('tmpl-resumen')?.value || '',
+                antecedentes: document.getElementById('tmpl-antecedentes')?.value || ''
+            };
+            if (plantillaEditandoClave && plantillaEditandoClave !== clave) delete personalizadas[plantillaEditandoClave];
+            personalizadas[clave] = nueva;
+            guardarPlantillasPersonalizadas(personalizadas);
+            alert('Plantilla guardada');
+            cerrarGestorPlantillas();
+        }
+        function cancelarEdicionPlantilla() { plantillaEditandoClave = null; cargarTablaPlantillas(); }
+        function eliminarPlantilla(clave) {
+            if (confirm(`¿Eliminar "${clave}"?`)) {
+                const personalizadas = getPlantillasPersonalizadas();
+                delete personalizadas[clave];
+                guardarPlantillasPersonalizadas(personalizadas);
+                cargarTablaPlantillas();
+                actualizarSelectPlantillas();
+            }
+        }
+
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+        function escapeAttr(str) { if (!str) return ''; return str.replace(/['"]/g, '&#39;'); }
+
+        // === FUNCIONES PRINCIPALES ===
+        function formatDate(input, e) {
+            if (e && e.inputType === 'deleteContentBackward') return;
+            let val = input.value.replace(/\D/g, '');
+            if (val.length > 2 && val.length <= 4) input.value = val.slice(0,2)+'-'+val.slice(2);
+            else if (val.length > 4) input.value = val.slice(0,2)+'-'+val.slice(2,4)+'-'+val.slice(4,8);
+            else input.value = val;
+        }
+        function actualizarContadores() {
+            ['antecedentes','padecimiento','exploracion'].forEach(campo => {
+                const ta = document.getElementById(`in-${campo}`);
+                const ct = document.getElementById(`counter-${campo}`);
+                if (ta && ct) ct.textContent = ta.value.length + ' caracteres';
+            });
+        }
+        function sync() {
+            const campos = ["establecimiento","fecha","paciente","nacimiento","edad","sexo","expediente","ta","fc","fr","temp","sat","padecimiento","exploracion","estudios","diagnostico","plan","pronostico","medico","cedula","antecedentes","motivo-egreso","dx-ingreso","dx-egreso","resumen","fecha-ingreso","fecha-egreso"];
+            campos.forEach(id => {
+                const input = document.getElementById("in-"+id);
+                const output = document.getElementById("out-"+id);
+                if (input && output) output.innerText = input.value;
+            });
+            actualizarContadores();
+        }
+        function guardarPacienteEnBD() {
+            const nombre = document.getElementById('in-paciente').value.trim().toUpperCase();
+            if (!nombre) { alert("Escribe el nombre"); return; }
+            let db = JSON.parse(localStorage.getItem('bt_pacientes_db')) || {};
+            const antecedentesInput = document.getElementById('in-antecedentes');
+            db[nombre] = {
+                nacimiento: document.getElementById('in-nacimiento').value,
+                sexo: document.getElementById('in-sexo').value,
+                expediente: document.getElementById('in-expediente').value,
+                antecedentes: antecedentesInput ? antecedentesInput.value : ''
+            };
+            localStorage.setItem('bt_pacientes_db', JSON.stringify(db));
+            actualizarListaPacientes();
+            alert("Paciente guardado");
+        }
+        function eliminarPacienteDeBD() {
+            const nombre = document.getElementById('in-paciente').value.trim().toUpperCase();
+            let db = JSON.parse(localStorage.getItem('bt_pacientes_db')) || {};
+            if (db[nombre] && confirm(`¿Eliminar a ${nombre}?`)) {
+                delete db[nombre];
+                localStorage.setItem('bt_pacientes_db', JSON.stringify(db));
+                actualizarListaPacientes();
+                document.getElementById('in-paciente').value = "";
+                sync();
+            }
+        }
+        function actualizarListaPacientes() {
+            const db = JSON.parse(localStorage.getItem('bt_pacientes_db')) || {};
+            const datalist = document.getElementById('lista-pacientes');
+            datalist.innerHTML = "";
+            for (let nombre in db) datalist.appendChild(new Option(nombre, nombre));
+        }
+        function cargarDatosPaciente() {
+            const nombre = document.getElementById('in-paciente').value.trim().toUpperCase();
+            const db = JSON.parse(localStorage.getItem('bt_pacientes_db')) || {};
+            if (db[nombre]) {
+                document.getElementById('in-nacimiento').value = db[nombre].nacimiento || "";
+                document.getElementById('in-sexo').value = db[nombre].sexo || "Masculino";
+                document.getElementById('in-expediente').value = db[nombre].expediente || "";
+                const antecedentesInput = document.getElementById('in-antecedentes');
+                if (antecedentesInput) antecedentesInput.value = db[nombre].antecedentes || "";
+                calcularEdad();
+                sync();
+            }
+        }
+        function calcularEdad() {
+            const val = document.getElementById("in-nacimiento").value;
+            if (!val || val.length !== 10) return;
+            const [dia, mes, año] = val.split('-');
+            const nac = new Date(año, parseInt(mes)-1, dia);
+            const hoy = new Date();
+            let edad = hoy.getFullYear() - nac.getFullYear();
+            if (hoy.getMonth() - nac.getMonth() < 0 || (hoy.getMonth()===nac.getMonth() && hoy.getDate()<nac.getDate())) edad--;
+            document.getElementById("in-edad").value = edad + " años";
+        }
+        function autoSaveDraft() {
+            const fields = ['padecimiento','exploracion','estudios','diagnostico','plan','pronostico','resumen','dx-ingreso','dx-egreso','motivo-egreso','expediente'];
+            const draft = {};
+            fields.forEach(f => { const el = document.getElementById('in-'+f); if (el) draft[f] = el.value; });
+            localStorage.setItem("nota_medica_draft", JSON.stringify(draft));
+        }
+        function loadDraft() {
+            const draft = JSON.parse(localStorage.getItem("nota_medica_draft"));
+            if (draft && confirm("Recuperar borrador?")) {
+                for (let k in draft) {
+                    let el = document.getElementById('in-'+k);
+                    if (el) el.value = draft[k];
+                }
+                sync();
+            }
+        }
+        function insertarEscala(texto) {
+            const exp = document.getElementById('in-exploracion');
+            exp.value += (exp.value ? '\n' : '') + texto;
+            sync();
+            autoSaveDraft();
+        }
+        function cargarPlantilla() {
+            const key = document.getElementById('select-plantilla').value;
+            if (!key) return;
+            const data = obtenerPlantillas()[key];
+            if (!data) return;
+            if (currentNoteType === 'egreso') {
+                document.getElementById('in-resumen').value = data.resumen || '';
+                document.getElementById('in-dx-ingreso').value = data.dxIngreso || '';
+                document.getElementById('in-dx-egreso').value = data.dxEgreso || '';
+                document.getElementById('in-motivo-egreso').value = data.motivoEgreso || '';
+            } else {
+                document.getElementById('in-padecimiento').value = data.padecimiento || '';
+                document.getElementById('in-exploracion').value = data.exploracion || '';
+                document.getElementById('in-diagnostico').value = data.diagnostico || '';
+            }
+            document.getElementById('in-plan').value = data.plan || '';
+            document.getElementById('in-estudios').value = data.estudios || '';
+            document.getElementById('in-pronostico').value = data.pronostico || '';
+            if (document.getElementById('in-antecedentes')) document.getElementById('in-antecedentes').value = data.antecedentes || '';
+            document.getElementById('select-plantilla').value = '';
+            sync();
+            autoSaveDraft();
+        }
+        function setNoteType(type) {
+            currentNoteType = type;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${type}`).classList.add('active');
+            const titulos = {consulta:'NOTA MÉDICA DE CONSULTA / EVOLUCIÓN', ingreso:'NOTA MÉDICA DE INGRESO', egreso:'NOTA MÉDICA DE EGRESO'};
+            document.getElementById('out-titulo-nota').innerText = titulos[type];
+            document.querySelectorAll('.form-ingreso-only, .form-egreso-only, .form-consulta-ingreso, .form-ingreso-egreso, .pdf-ingreso-only, .pdf-egreso-only, .pdf-consulta-ingreso, .pdf-ingreso-egreso').forEach(el => el.classList.add('hidden'));
+            if (type === 'consulta') {
+                document.querySelectorAll('.form-consulta-ingreso, .pdf-consulta-ingreso').forEach(e => e.classList.remove('hidden'));
+                toggleVisibility('out-row-vitals', document.getElementById('check-vitals-row').checked);
+            } else if (type === 'ingreso') {
+                document.querySelectorAll('.form-consulta-ingreso, .form-ingreso-only, .form-ingreso-egreso, .pdf-consulta-ingreso, .pdf-ingreso-only, .pdf-ingreso-egreso').forEach(e => e.classList.remove('hidden'));
+            } else if (type === 'egreso') {
+                document.querySelectorAll('.form-egreso-only, .form-ingreso-egreso, .pdf-egreso-only, .pdf-ingreso-egreso').forEach(e => e.classList.remove('hidden'));
+                document.getElementById('out-row-vitals').classList.add('hidden');
+            }
+            sync();
+        }
+        function toggleVisibility(id, visible) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (id === 'out-row-vitals' && currentNoteType === 'egreso') return;
+            visible ? el.classList.remove('hidden') : el.classList.add('hidden');
+        }
+        function toggleMembrete(v) {
+            const logo = localStorage.getItem("membrete_medico");
+            document.getElementById("note-to-print").style.backgroundImage = v && logo ? `url('${logo}')` : 'none';
+        }
+        function moverTexto(valor) {
+            document.getElementById("text-layer").style.top = valor + "mm";
+            localStorage.setItem("posicion_texto", valor);
+        }
+        function clearForm() {
+            if (confirm("¿Borrar todo?")) {
+                document.querySelectorAll("input:not(#in-fecha, #in-medico, #in-cedula, .check-ctrl, [type='range'], [type='file']), textarea").forEach(i => i.value = "");
+                document.querySelectorAll('.check-ctrl').forEach(cb => cb.checked = true);
+                document.getElementById('check-membrete').checked = true;
+                const selectEst = document.getElementById('in-establecimiento');
+                if (selectEst.options.length) selectEst.selectedIndex = 0;
+                localStorage.removeItem("nota_medica_draft");
+                sync();
+            }
+        }
+        function validarFormulario() {
+            if (!document.getElementById('in-paciente').value.trim()) { alert("Nombre del paciente obligatorio"); return false; }
+            if (!document.getElementById('in-medico').value.trim()) { alert("Médico obligatorio"); return false; }
+            return true;
+        }
+        function generatePDF() {
+            if (!validarFormulario()) return;
+            const ahora = new Date();
+            document.getElementById("out-hora").innerText = ahora.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const paciente = document.getElementById("in-paciente").value;
+            const tipo = currentNoteType.toUpperCase();
+            const element = document.getElementById("note-to-print");
+            const nombreArchivo = `EXP_${tipo}_${paciente.replace(/\s+/g, '_')}.pdf`;
+            html2pdf().set({margin:0, filename:nombreArchivo, image:{type:'jpeg',quality:1}, html2canvas:{scale:4}, jsPDF:{unit:'mm', format:'letter', orientation:'portrait'}}).from(element).save();
+        }
+
+        // ========== INICIALIZACIÓN DEL SISTEMA TRAS LOGIN ==========
+        function iniciarSistema() {
+            const ahora = new Date();
+            const dd = String(ahora.getDate()).padStart(2,'0');
+            const mm = String(ahora.getMonth()+1).padStart(2,'0');
+            document.getElementById("in-fecha").value = `${dd}-${mm}-${ahora.getFullYear()}`;
+            document.getElementById("out-hora").innerText = ahora.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const savedLogo = localStorage.getItem("membrete_medico");
+            if (savedLogo && document.getElementById("check-membrete").checked) document.getElementById("note-to-print").style.backgroundImage = `url('${savedLogo}')`;
+            const pos = localStorage.getItem("posicion_texto") || 95;
+            moverTexto(pos);
+            document.getElementById("slider-texto").value = pos;
+            actualizarListaPacientes();
+            actualizarSelectEstablecimientos();
+            actualizarSelectPlantillas();
+            setNoteType('consulta');
+            loadDraft();
+            sync();
+
+            // Eventos
+            document.getElementById('tab-consulta').onclick = () => setNoteType('consulta');
+            document.getElementById('tab-ingreso').onclick = () => setNoteType('ingreso');
+            document.getElementById('tab-egreso').onclick = () => setNoteType('egreso');
+            document.getElementById('guardarPacienteBtn').onclick = guardarPacienteEnBD;
+            document.getElementById('eliminarPacienteBtn').onclick = eliminarPacienteDeBD;
+            document.getElementById('in-paciente').oninput = cargarDatosPaciente;
+            document.getElementById('in-nacimiento').oninput = function() { formatDate(this, event); calcularEdad(); sync(); };
+            document.getElementById('in-fecha-ingreso').oninput = function() { formatDate(this, event); sync(); };
+            document.getElementById('in-fecha-egreso').oninput = function() { formatDate(this, event); sync(); };
+            document.getElementById('in-fecha').oninput = function() { formatDate(this, event); sync(); };
+            document.querySelectorAll('.quick-btn').forEach(btn => btn.onclick = () => insertarEscala(btn.getAttribute('data-texto')));
+            document.getElementById('select-plantilla').onchange = cargarPlantilla;
+            document.getElementById('btnGestionarPlantillas').onclick = abrirGestorPlantillas;
+            document.getElementById('btnGestionarEstablecimientos').onclick = abrirGestorEstablecimientos;
+            document.getElementById('generarPdfBtn').onclick = generatePDF;
+            document.getElementById('borrarFormBtn').onclick = clearForm;
+            document.getElementById('check-membrete').onchange = function() { toggleMembrete(this.checked); };
+            document.getElementById('slider-texto').oninput = function() { moverTexto(this.value); };
+            document.getElementById('checkMuestraPaciente').onchange = function() { toggleVisibility('out-row-paciente', this.checked); };
+            document.getElementById('check-vitals-row').onchange = function() { toggleVisibility('out-row-vitals', this.checked && currentNoteType !== 'egreso'); };
+            ['checkAntecedentes','checkMotivoEgreso','checkDxIngreso','checkDxEgreso','checkResumen','checkPadecimiento','checkExploracion','checkEstudios','checkDiagnostico','checkPlan','checkPronostico'].forEach(id => {
+                const cb = document.getElementById(id);
+                if (cb) cb.addEventListener('change', (e) => toggleVisibility(`out-sec-${id.replace('check','').toLowerCase()}`, e.target.checked));
+            });
+            document.querySelectorAll('input, textarea, select').forEach(el => {
+                if (el.id && el.id.startsWith('in-')) el.addEventListener('input', () => { sync(); autoSaveDraft(); });
+            });
+        }
+
+        // Eventos de login
+        document.getElementById("loginBtn").onclick = login;
+        document.getElementById("logoutBtn").onclick = logout;
+        document.getElementById("loginPass").addEventListener("keypress", e => { if (e.key === "Enter") login(); });
+        checkSession();
+    </script>
+</body>
+</html>
